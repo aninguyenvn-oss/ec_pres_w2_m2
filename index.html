@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocabulary Ocean</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root { --ocean-deep: #0a2a4a; --foam: #e0f7ff; --seafoam: #4ecdc4; }
+
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito', sans-serif; background: var(--ocean-deep); }
+
+  #app {
+    width: 80vw; height: 80vh; margin: 5vh auto 0;
+    border-radius: 24px; overflow: hidden; position: relative;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.6);
+    display: flex; flex-direction: column;
+  }
+
+  #ocean-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, #0a3d6b 0%, #0e5a96 40%, #1a7ab5 75%, #2ab0e8 100%);
+    z-index: 0;
+  }
+
+  #ocean-bg::before {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.03) 1%, transparent 2%, transparent 6%, rgba(255,255,255,0.02) 7%, transparent 8%);
+    animation: rays 8s linear infinite; transform-origin: top center;
+  }
+
+  @keyframes rays { 0% { transform:skewX(-5deg) translateX(-5%); opacity:.5; } 50% { opacity:1; } 100% { transform:skewX(-5deg) translateX(5%); opacity:.5; } }
+
+  .bg-bubble { position: absolute; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); animation: bg-rise linear infinite; z-index: 1; pointer-events: none; }
+
+  @keyframes bg-rise { 0% { transform:translateY(0) scale(1); opacity:0; } 10% { opacity:1; } 90% { opacity:.6; } 100% { transform:translateY(-110vh) scale(1.2); opacity:0; } }
+
+  #sand-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 48px; background: linear-gradient(180deg, rgba(180,140,60,0) 0%, rgba(210,165,75,0.35) 40%, rgba(230,185,90,0.5) 100%); z-index: 1; pointer-events: none; }
+
+  .seaweed { position: absolute; bottom: 0; width: 12px; background: linear-gradient(180deg, #2d9e6e, #1a6b48); border-radius: 50% 50% 0 0 / 40% 40% 0 0; transform-origin: bottom center; animation: sway 3s ease-in-out infinite; z-index: 1; pointer-events: none; }
+
+  @keyframes sway { 0%,100% { transform:rotate(-8deg); } 50% { transform:rotate(8deg); } }
+
+  /* TOP CONTROLS */
+  #controls {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; gap: 14px; padding: 10px 20px;
+    background: rgba(10,30,60,0.78); backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;
+  }
+
+  #title-label { font-family:'Fredoka One',cursive; font-size:1.3rem; color:var(--foam); letter-spacing:1px; text-shadow:0 0 12px rgba(42,176,232,0.7); margin-right:6px; white-space:nowrap; }
+
+  .ctrl-btn { display:flex; align-items:center; justify-content:center; gap:6px; padding:7px 18px; border:none; border-radius:50px; font-family:'Nunito',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; transition:transform .15s,box-shadow .15s; flex-shrink:0; }
+  .ctrl-btn:active { transform:scale(0.95); }
+
+  #btn-play  { background:linear-gradient(135deg,#4ecdc4,#26a69a); color:#fff; box-shadow:0 4px 14px rgba(78,205,196,.4); }
+  #btn-play:hover  { box-shadow:0 6px 20px rgba(78,205,196,.6); transform:translateY(-1px); }
+  #btn-pause { background:linear-gradient(135deg,#ffd97d,#ffb300); color:#7a4a00; box-shadow:0 4px 14px rgba(255,179,0,.4); }
+  #btn-pause:hover { box-shadow:0 6px 20px rgba(255,179,0,.6); transform:translateY(-1px); }
+
+  .speed-wrapper { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:50px; padding:5px 14px; flex-shrink:0; }
+  .speed-label { font-size:.78rem; font-weight:700; color:var(--foam); white-space:nowrap; opacity:.8; }
+
+  #speed-slider { -webkit-appearance:none; width:90px; height:4px; border-radius:2px; background:rgba(255,255,255,.25); outline:none; cursor:pointer; }
+  #speed-slider::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--seafoam); box-shadow:0 0 6px rgba(78,205,196,.7); cursor:pointer; }
+
+  #speed-val { font-size:.78rem; font-weight:800; color:var(--seafoam); min-width:24px; text-align:center; }
+  #counter-pill { margin-left:auto; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:50px; padding:4px 14px; font-size:.78rem; font-weight:700; color:rgba(255,255,255,.6); white-space:nowrap; }
+
+  /* GAME AREA */
+  #game-area { flex:1; position:relative; overflow:hidden; z-index:2; }
+
+  /* WORD BUBBLES — all same large size */
+  .word-bubble {
+    position: absolute; border-radius: 50px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.9rem;
+    color: #fff;
+    padding: 12px 32px;
+    cursor: default; user-select: none;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border: 2.5px solid rgba(255,255,255,0.35);
+    will-change: transform; transition: opacity 0.8s ease; white-space: nowrap;
+  }
+
+  .word-bubble::before { content:''; position:absolute; top:5px; left:14px; right:42%; height:7px; border-radius:4px; background:rgba(255,255,255,0.35); pointer-events:none; }
+
+  .word-bubble.fading-out { opacity:0; }
+  .word-bubble.fading-in  { animation:popIn .5s cubic-bezier(.175,.885,.32,1.275) forwards; }
+
+  @keyframes popIn { 0%{transform:scale(0.3);opacity:0;} 100%{transform:scale(1);opacity:1;} }
+
+  .bc-0{background:linear-gradient(135deg,#ff6b6b,#ee5a24);box-shadow:0 8px 24px rgba(255,107,107,.45),inset 0 -4px 0 rgba(0,0,0,.2);}
+  .bc-1{background:linear-gradient(135deg,#48dbfb,#0abde3);box-shadow:0 8px 24px rgba(72,219,251,.45),inset 0 -4px 0 rgba(0,0,0,.2);}
+  .bc-2{background:linear-gradient(135deg,#ff9f43,#f77f00);box-shadow:0 8px 24px rgba(255,159,67,.45),inset 0 -4px 0 rgba(0,0,0,.2);}
+  .bc-3{background:linear-gradient(135deg,#1dd1a1,#10ac84);box-shadow:0 8px 24px rgba(29,209,161,.45),inset 0 -4px 0 rgba(0,0,0,.2);}
+  .bc-4{background:linear-gradient(135deg,#a29bfe,#6c5ce7);box-shadow:0 8px 24px rgba(162,155,254,.45),inset 0 -4px 0 rgba(0,0,0,.2);}
+  .bc-5{background:linear-gradient(135deg,#fd79a8,#e84393);box-shadow:0 8px 24px rgba(253,121,168,.45),inset 0 -4px 0 rgba(0,0,0,.2);}
+  .bc-6{background:linear-gradient(135deg,#f9ca24,#f0932b);box-shadow:0 8px 24px rgba(249,202,36,.45),inset 0 -4px 0 rgba(0,0,0,.2);}
+  .bc-7{background:linear-gradient(135deg,#55efc4,#00b894);box-shadow:0 8px 24px rgba(85,239,196,.45),inset 0 -4px 0 rgba(0,0,0,.2);}
+
+  /* OVERLAYS */
+  #pause-overlay, #time-up-overlay {
+    position:absolute; inset:0; background:rgba(10,30,60,.65); backdrop-filter:blur(5px);
+    z-index:20; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+  }
+  #pause-overlay.visible, #time-up-overlay.visible { display:flex; }
+
+  .pause-msg   { font-family:'Fredoka One',cursive; font-size:2.5rem; color:var(--foam);  text-shadow:0 0 30px rgba(42,176,232,.8); letter-spacing:3px; animation:pulse 2s ease-in-out infinite; }
+  .timeup-msg  { font-family:'Fredoka One',cursive; font-size:3rem;   color:#ffd97d;       text-shadow:0 0 30px rgba(255,217,125,.9); letter-spacing:4px; animation:pulse 1.5s ease-in-out infinite; }
+
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.75;transform:scale(.97);} }
+
+  .timeup-sub  { font-family:'Nunito',sans-serif; font-size:1.1rem; font-weight:700; color:rgba(255,255,255,.75); }
+
+  #btn-restart { padding:11px 30px; border:none; border-radius:50px; background:linear-gradient(135deg,#1dd1a1,#10ac84); color:#fff; font-family:'Fredoka One',cursive; font-size:1.15rem; cursor:pointer; box-shadow:0 6px 20px rgba(29,209,161,.5); transition:transform .15s; letter-spacing:1px; }
+  #btn-restart:hover { transform:scale(1.06); }
+
+  /* FISH */
+  .fish-deco { position:absolute; animation:swim linear infinite; z-index:1; pointer-events:none; opacity:.7; }
+
+  @keyframes swim {
+    0%  {transform:translateX(-80px) scaleX(1);}
+    49% {transform:translateX(calc(80vw + 80px)) scaleX(1);}
+    50% {transform:translateX(calc(80vw + 80px)) scaleX(-1);}
+    99% {transform:translateX(-80px) scaleX(-1);}
+    100%{transform:translateX(-80px) scaleX(1);}
+  }
+
+  /* TIMER BAR (bottom) */
+  #timer-bar {
+    position:relative; z-index:10;
+    display:flex; align-items:center; gap:12px; padding:9px 20px;
+    background:rgba(10,30,60,.85); backdrop-filter:blur(10px);
+    border-top:1px solid rgba(255,255,255,.12); flex-shrink:0;
+  }
+
+  .timer-label { font-family:'Fredoka One',cursive; font-size:.95rem; color:var(--foam); white-space:nowrap; letter-spacing:.5px; }
+
+  #timer-display { font-family:'Fredoka One',cursive; font-size:1.5rem; color:var(--seafoam); min-width:58px; text-align:center; text-shadow:0 0 10px rgba(78,205,196,.6); }
+  #timer-display.warning { color:#ff6b6b; text-shadow:0 0 12px rgba(255,107,107,.8); animation:blink .6s step-end infinite; }
+
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.2;} }
+
+  #timer-track { flex:1; height:16px; background:rgba(255,255,255,.1); border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,.15); }
+
+  #timer-fill { height:100%; width:100%; border-radius:8px; background:linear-gradient(90deg,#4ecdc4,#48dbfb); transform-origin:left; transition:background .6s; }
+  #timer-fill.warning { background:linear-gradient(90deg,#ff6b6b,#ffd97d); }
+
+  .timer-setting { display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:50px; padding:5px 14px; flex-shrink:0; }
+  .timer-setting > span { font-size:.75rem; font-weight:700; color:var(--foam); opacity:.8; white-space:nowrap; }
+
+  #duration-slider { -webkit-appearance:none; width:90px; height:4px; border-radius:2px; background:rgba(255,255,255,.25); outline:none; cursor:pointer; }
+  #duration-slider::-webkit-slider-thumb { -webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:#ffd97d; box-shadow:0 0 6px rgba(255,217,125,.8); cursor:pointer; }
+
+  #duration-val { font-size:.75rem; font-weight:800; color:#ffd97d; min-width:38px; text-align:center; }
+
+  #btn-reset-timer { padding:6px 16px; border:none; border-radius:50px; background:linear-gradient(135deg,#a29bfe,#6c5ce7); color:#fff; font-family:'Nunito',sans-serif; font-weight:700; font-size:.8rem; cursor:pointer; transition:transform .15s,box-shadow .15s; box-shadow:0 4px 12px rgba(108,92,231,.4); flex-shrink:0; }
+  #btn-reset-timer:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(108,92,231,.6); }
+  #btn-reset-timer:active { transform:scale(.95); }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="ocean-bg"></div>
+  <div id="sand-bar"></div>
+
+  <!-- Top controls -->
+  <div id="controls">
+    <span id="title-label">🌊 Vocab Ocean</span>
+    <button class="ctrl-btn" id="btn-play">▶ Play</button>
+    <button class="ctrl-btn" id="btn-pause">⏸ Pause</button>
+    <div class="speed-wrapper">
+      <span class="speed-label">Speed</span>
+      <input type="range" id="speed-slider" min="1" max="5" value="2" step="0.5">
+      <span id="speed-val">2</span>
+    </div>
+    <div id="counter-pill">Words seen: <span id="seen-count">0</span> / 25</div>
+  </div>
+
+  <!-- Game area -->
+  <div id="game-area">
+    <div id="pause-overlay">
+      <span class="pause-msg">~ PAUSED ~</span>
+    </div>
+    <div id="time-up-overlay">
+      <div class="timeup-msg">⏰ TIME'S UP!</div>
+      <div class="timeup-sub">Words seen: <span id="final-count">0</span> / 25</div>
+      <button id="btn-restart">🔄 Play Again</button>
+    </div>
+  </div>
+
+  <!-- Timer bar (bottom) -->
+  <div id="timer-bar">
+    <span class="timer-label">⏱ Timer</span>
+    <div id="timer-display">2:00</div>
+    <div id="timer-track"><div id="timer-fill"></div></div>
+    <div class="timer-setting">
+      <span>Duration</span>
+      <input type="range" id="duration-slider" min="1" max="10" value="2" step="1">
+      <span id="duration-val">2 min</span>
+    </div>
+    <button id="btn-reset-timer">↺ Reset</button>
+  </div>
+</div>
+
+<script>
+const WORDS = [
+  'floor','brave','flag','breakfast','flip','brush','flower','bright',
+  'flat','branches','fly','bread','brown','flute','brick','float',
+  'brown','flock','bridge','flash','bring','flew','broken','flame','brother'
+];
+
+const BUBBLE_FONT    = '1.9rem';
+const BUBBLE_PAD     = '12px 32px';
+const VISIBLE        = 10;
+const CYCLE_INTERVAL = 4500;
+
+let paused = false;
+let speed  = 2;
+let animFrame, cycleTimer;
+let seenWords = new Set();
+
+const gameArea      = document.getElementById('game-area');
+const pauseOverlay  = document.getElementById('pause-overlay');
+const timeUpOverlay = document.getElementById('time-up-overlay');
+const speedSlider   = document.getElementById('speed-slider');
+const speedVal      = document.getElementById('speed-val');
+const seenCount     = document.getElementById('seen-count');
+const finalCount    = document.getElementById('final-count');
+
+// ── TIMER ──
+let timerDuration  = 2 * 60;
+let timerRemaining = timerDuration;
+let timerInterval  = null;
+let timerRunning   = false;
+
+const timerDisplay   = document.getElementById('timer-display');
+const timerFill      = document.getElementById('timer-fill');
+const durationSlider = document.getElementById('duration-slider');
+const durationVal    = document.getElementById('duration-val');
+
+function formatTime(s) {
+  return Math.floor(s/60) + ':' + (s%60).toString().padStart(2,'0');
+}
+
+function updateTimerUI() {
+  timerDisplay.textContent = formatTime(timerRemaining);
+  const pct  = timerDuration > 0 ? timerRemaining / timerDuration : 0;
+  timerFill.style.transform = `scaleX(${pct})`;
+  const warn = timerRemaining <= 10 && timerRemaining > 0;
+  timerDisplay.classList.toggle('warning', warn);
+  timerFill.classList.toggle('warning', warn);
+}
+
+function startTimer() {
+  if (timerInterval || timerRemaining <= 0) return;
+  timerRunning = true;
+  timerInterval = setInterval(() => {
+    if (paused) return;
+    timerRemaining--;
+    updateTimerUI();
+    if (timerRemaining <= 0) {
+      clearInterval(timerInterval); timerInterval = null; timerRunning = false;
+      onTimeUp();
+    }
+  }, 1000);
+}
+
+function resetTimer() {
+  clearInterval(timerInterval); timerInterval = null; timerRunning = false;
+  timerRemaining = timerDuration;
+  updateTimerUI();
+  timeUpOverlay.classList.remove('visible');
+  if (!paused) startTimer();
+}
+
+function onTimeUp() {
+  finalCount.textContent = seenWords.size;
+  timeUpOverlay.classList.add('visible');
+  clearInterval(cycleTimer);
+}
+
+durationSlider.addEventListener('input', () => {
+  const mins = parseInt(durationSlider.value);
+  durationVal.textContent = mins + ' min';
+  timerDuration = mins * 60;
+  clearInterval(timerInterval); timerInterval = null; timerRunning = false;
+  timerRemaining = timerDuration;
+  updateTimerUI();
+  if (!paused) startTimer();
+});
+
+document.getElementById('btn-reset-timer').addEventListener('click', resetTimer);
+
+// ── BUBBLES ──
+let bubbles  = [];
+let wordPool = [...WORDS];
+let poolIdx  = 0;
+
+function shuffle(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+}
+shuffle(wordPool);
+
+function nextWord() {
+  const w = wordPool[poolIdx % wordPool.length];
+  poolIdx++;
+  seenWords.add(w);
+  seenCount.textContent = seenWords.size;
+  return w;
+}
+
+function getAreaDims() { return { W: gameArea.clientWidth, H: gameArea.clientHeight }; }
+
+function createBubble(word) {
+  const { W, H } = getAreaDims();
+  const colorClass = 'bc-' + Math.floor(Math.random()*8);
+  const el = document.createElement('div');
+  el.className = 'word-bubble fading-in ' + colorClass;
+  el.textContent = word;
+  el.style.fontSize = BUBBLE_FONT;
+  el.style.padding  = BUBBLE_PAD;
+  el.style.left = '0px'; el.style.top = '0px'; el.style.opacity = '0';
+  gameArea.appendChild(el);
+  const bw = el.offsetWidth  || 180;
+  const bh = el.offsetHeight || 66;
+  const x  = Math.random() * Math.max(0, W - bw);
+  const y  = Math.random() * Math.max(0, H - bh - 60);
+  const a  = Math.random() * Math.PI * 2;
+  const sp = 0.5 + Math.random() * 0.6;
+  el.style.left = x+'px'; el.style.top = y+'px'; el.style.opacity = '';
+  return { el, x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, w: bw, h: bh };
+}
+
+function initBubbles() {
+  bubbles = [];
+  for (let i = 0; i < VISIBLE; i++) bubbles.push(createBubble(nextWord()));
+}
+
+function clearBubbles() {
+  bubbles.forEach(b => b.el.parentNode && b.el.parentNode.removeChild(b.el));
+  bubbles = [];
+}
+
+function cycleBubble() {
+  if (paused || !timerRunning) return;
+  const idx = Math.floor(Math.random()*bubbles.length);
+  const old = bubbles[idx];
+  old.el.classList.add('fading-out');
+  setTimeout(() => old.el.parentNode && old.el.parentNode.removeChild(old.el), 800);
+  bubbles[idx] = createBubble(nextWord());
+}
+
+function step() {
+  if (!paused && timerRunning) {
+    const { W, H } = getAreaDims();
+    for (const b of bubbles) {
+      b.x += b.vx * speed; b.y += b.vy * speed;
+      if (b.x < 0)            { b.x = 0;        b.vx =  Math.abs(b.vx); }
+      if (b.x + b.w > W)      { b.x = W - b.w;  b.vx = -Math.abs(b.vx); }
+      if (b.y < 0)            { b.y = 0;         b.vy =  Math.abs(b.vy); }
+      if (b.y + b.h > H - 50) { b.y = H-50-b.h; b.vy = -Math.abs(b.vy); }
+      b.el.style.left = b.x+'px'; b.el.style.top = b.y+'px';
+    }
+  }
+  animFrame = requestAnimationFrame(step);
+}
+
+function startCycleTimer() {
+  clearInterval(cycleTimer);
+  cycleTimer = setInterval(cycleBubble, CYCLE_INTERVAL);
+}
+
+function pauseGame() {
+  paused = true;
+  pauseOverlay.classList.add('visible');
+  clearInterval(cycleTimer);
+}
+
+function playGame() {
+  paused = false;
+  pauseOverlay.classList.remove('visible');
+  startCycleTimer();
+  if (!timerRunning && timerRemaining > 0) startTimer();
+}
+
+document.getElementById('btn-restart').addEventListener('click', () => {
+  timeUpOverlay.classList.remove('visible');
+  seenWords.clear(); seenCount.textContent = '0';
+  wordPool = [...WORDS]; shuffle(wordPool); poolIdx = 0;
+  clearBubbles(); initBubbles();
+  timerRemaining = timerDuration;
+  updateTimerUI();
+  startCycleTimer(); startTimer();
+});
+
+document.getElementById('btn-pause').addEventListener('click', pauseGame);
+document.getElementById('btn-play').addEventListener('click', playGame);
+speedSlider.addEventListener('input', () => { speed = parseFloat(speedSlider.value); speedVal.textContent = speed; });
+
+// ── DECORATIONS ──
+function makeBgBubbles() {
+  for (let i = 0; i < 18; i++) {
+    const d = document.createElement('div');
+    d.className = 'bg-bubble';
+    const sz = 6 + Math.random()*22;
+    d.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;bottom:${-sz}px;animation-duration:${6+Math.random()*10}s;animation-delay:${Math.random()*8}s;`;
+    document.getElementById('ocean-bg').appendChild(d);
+  }
+}
+
+function makeSeaweed() {
+  [5,12,18,25,35,42,55,63,72,80,88,95].forEach(p => {
+    const sw = document.createElement('div');
+    sw.className = 'seaweed';
+    const h = 28 + Math.random()*30;
+    sw.style.cssText = `left:${p}%;height:${h}px;animation-delay:${Math.random()*2}s;animation-duration:${2+Math.random()*2}s;opacity:${0.5+Math.random()*0.5};`;
+    document.getElementById('app').appendChild(sw);
+  });
+}
+
+function makeFish() {
+  ['🐠','🐡','🐟'].forEach((e, i) => {
+    const f = document.createElement('div');
+    f.className = 'fish-deco';
+    f.textContent = e;
+    const top = 20 + Math.random()*55;
+    const dur = 14 + Math.random()*12;
+    f.style.cssText = `top:${top}%;animation-duration:${dur}s;animation-delay:${Math.random()*10}s;font-size:${1+Math.random()*0.6}rem;`;
+    gameArea.appendChild(f);
+  });
+}
+
+// ── INIT ──
+makeBgBubbles(); makeSeaweed(); makeFish();
+initBubbles(); startCycleTimer(); startTimer();
+updateTimerUI();
+animFrame = requestAnimationFrame(step);
+
+window.addEventListener('resize', () => {
+  const { W, H } = getAreaDims();
+  for (const b of bubbles) {
+    b.x = Math.min(b.x, Math.max(0, W - b.w));
+    b.y = Math.min(b.y, Math.max(0, H - b.h - 50));
+  }
+});
+</script>
+</body>
+</html>
